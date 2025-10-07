@@ -114,7 +114,7 @@ const ProviderTable: React.FC<ProviderTableProps> = ({
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
               <TableCell sx={{ fontWeight: 600 }}>Razón Social</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Nombre Comercial</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>RUC</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Identificacion Tributaria</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>País</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Facturación</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Sitio Web</TableCell>
@@ -239,7 +239,7 @@ const ProviderTable: React.FC<ProviderTableProps> = ({
         fullWidth
       >
         <DialogTitle>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography sx={{ fontWeight: 600 }}>
             Confirmar Eliminación
           </Typography>
         </DialogTitle>

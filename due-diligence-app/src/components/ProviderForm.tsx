@@ -39,8 +39,7 @@ const schema = yup.object({
     .min(3, 'El nombre comercial debe tener al menos 3 caracteres'),
   ruc: yup
     .string()
-    .required('El RUC es requerido')
-    .matches(/^\d{11}$/, 'El RUC debe tener exactamente 11 dígitos'),
+    .required('La Identificacion Tributaria es requerido'),
   telefono: yup
     .string()
     .required('El teléfono es requerido')
@@ -205,7 +204,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="RUC (11 dígitos)"
+                    label="Identificación Tributaria"
                     fullWidth
                     error={!!errors.ruc}
                     helperText={errors.ruc?.message}

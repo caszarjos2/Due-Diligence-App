@@ -3,7 +3,7 @@ import type { Provider, ProviderFormData, ScreeningResult } from '../types/Provi
 
 // Configure axios instance
 const api = axios.create({
-  baseURL: 'https://localhost:7058/api',
+  baseURL: 'http://localhost:5048/api',
   headers: {
     'Content-Type': 'application/json',
   },

@@ -144,7 +144,7 @@ const ProviderDetails: React.FC<ProviderDetailsProps> = ({
                     />
                     <InfoItem
                       icon={<Typography sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>#</Typography>}
-                      label="RUC"
+                      label="Identificacion Tributaria"
                       value={provider.ruc}
                     />
                   </Grid>
