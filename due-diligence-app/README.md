@@ -71,7 +71,23 @@ https://localhost:7058/api
 - `POST /providers` - Crear nuevo proveedor
 - `PUT /providers/{id}` - Actualizar proveedor
 - `DELETE /providers/{id}` - Eliminar proveedor
-- `GET /providers/{id}/screening?fuentes=OFAC,WorldBank` - Screening de riesgo
+- `GET /providers/{id}/screening?fuentes=OFAC,WorldBank,OffshoreLeaks` - Screening de riesgo
+
+### Formato de respuesta del Screening:
+```json
+{
+  "company name": "Empresa Ejemplo",
+  "ofac": [
+    ["Nombre", "Dirección", "Tipo", "Programa", "Lista", "Score"]
+  ],
+  "worldbank": [
+    ["Nombre Empresa", "Dirección", "País", "Fecha Desde", "Fecha Hasta", "Motivos"]
+  ],
+  "offshore": [
+    ["Entidad", "Jurisdicción", "Vinculado a", "Fuente de Datos"]
+  ]
+}
+```
 
 ## 📋 Modelo de Datos
 
@@ -101,9 +117,14 @@ interface Provider {
 - Estadísticas en dashboard
 
 ### ✅ Screening de Riesgo
-- Selección de fuentes: OFAC, World Bank, Offshore Leaks
-- Resultados con niveles de riesgo (Bajo, Medio, Alto)
-- Interfaz intuitiva con colores y iconos
+- **Selección de fuentes**: OFAC, World Bank, Offshore Leaks
+- **Tablas específicas** para cada fuente con sus propios campos:
+  - **OFAC**: Nombre, Dirección, Tipo, Programa(s), Lista, Score
+  - **World Bank**: Nombre de Empresa, Dirección, País, Fechas, Motivos
+  - **Offshore Leaks**: Entidad, Jurisdicción, Vinculado a, Fuente de Datos
+- **Visualización condicional**: Solo muestra tablas con resultados
+- **Alertas inteligentes**: Diferentes colores según el nivel de riesgo
+- **Acciones adicionales**: Generar reporte PDF, marcar como alto riesgo
 
 ### ✅ Validaciones
 - RUC: 11 dígitos exactos

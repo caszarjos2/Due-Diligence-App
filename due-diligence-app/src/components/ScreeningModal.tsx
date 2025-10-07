@@ -28,7 +28,14 @@ import {
   Security,
   Search
 } from '@mui/icons-material';
-import type { Provider, ScreeningResult } from '../types/Provider';
+import type { 
+  Provider, 
+  ScreeningResponse, 
+  ProcessedScreeningResults,
+  OFACResult,
+  WorldBankResult,
+  OffshoreResult
+} from '../types/Provider';
 import { FUENTES_SCREENING } from '../types/Provider';
 import { providerApi } from '../services/api';
 
@@ -44,7 +51,7 @@ const ScreeningModal: React.FC<ScreeningModalProps> = ({
   provider
 }) => {
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
-  const [results, setResults] = useState<ScreeningResult[]>([]);
+  const [results, setResults] = useState<ProcessedScreeningResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -57,6 +64,47 @@ const ScreeningModal: React.FC<ScreeningModalProps> = ({
     );
   };
 
+  // Función para procesar los datos del screening
+  const processScreeningData = (data: ScreeningResponse): ProcessedScreeningResults => {
+    const processOFAC = (ofacData: string[][]): OFACResult[] => {
+      return ofacData.map(row => ({
+        name: row[0] || '',
+        address: row[1] || '',
+        type: row[2] || '',
+        programs: row[3] || '',
+        list: row[4] || '',
+        score: row[5] || ''
+      }));
+    };
+
+    const processWorldBank = (wbData: string[][]): WorldBankResult[] => {
+      return wbData.map(row => ({
+        firmName: row[0] || '',
+        address: row[1] || '',
+        country: row[2] || '',
+        fromDate: row[3] || '',
+        toDate: row[4] || '',
+        grounds: row[5] || ''
+      }));
+    };
+
+    const processOffshore = (offshoreData: string[][]): OffshoreResult[] => {
+      return offshoreData.map(row => ({
+        entity: row[0] || '',
+        jurisdiction: row[1] || '',
+        linkedTo: row[2] || '',
+        dataFrom: row[3] || ''
+      }));
+    };
+
+    return {
+      companyName: data['company name'],
+      ofac: processOFAC(data.ofac || []),
+      worldbank: processWorldBank(data.worldbank || []),
+      offshore: processOffshore(data.offshore || [])
+    };
+  };
+
   const handleScreening = async () => {
     if (!provider?.id || selectedSources.length === 0) return;
 
@@ -65,13 +113,14 @@ const ScreeningModal: React.FC<ScreeningModalProps> = ({
     setHasSearched(false);
 
     try {
-      const screeningResults = await providerApi.screening(provider.id, selectedSources);
-      setResults(screeningResults);
+      const screeningResponse = await providerApi.screening(provider.id, selectedSources);
+      const processedResults = processScreeningData(screeningResponse);
+      setResults(processedResults);
       setHasSearched(true);
     } catch (err) {
       console.error('Error during screening:', err);
       setError('Error al realizar el screening. Por favor intenta nuevamente.');
-      setResults([]);
+      setResults(null);
     } finally {
       setLoading(false);
     }
@@ -79,32 +128,15 @@ const ScreeningModal: React.FC<ScreeningModalProps> = ({
 
   const handleClose = () => {
     setSelectedSources([]);
-    setResults([]);
+    setResults(null);
     setError(null);
     setHasSearched(false);
     onClose();
   };
 
-  const getRiskColor = (nivel: string) => {
-    switch (nivel.toLowerCase()) {
-      case 'bajo':
-        return 'success';
-      case 'medio':
-        return 'warning';
-      case 'alto':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
+  const getTotalResults = () => {
+    if (!results) return 0;
+    return results.ofac.length + results.worldbank.length + results.offshore.length;
   };
 
   if (!provider) return null;
@@ -188,13 +220,13 @@ const ScreeningModal: React.FC<ScreeningModalProps> = ({
         )}
 
         {/* Results Section */}
-        {hasSearched && (
+        {hasSearched && results && (
           <Box>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              Resultados del Screening
+              Resultados del Screening para: {results.companyName}
             </Typography>
             
-            {results.length === 0 ? (
+            {getTotalResults() === 0 ? (
               <Alert severity="success" sx={{ mb: 2 }}>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
                   ✅ No se encontraron coincidencias
@@ -207,60 +239,169 @@ const ScreeningModal: React.FC<ScreeningModalProps> = ({
               <>
                 <Alert severity="warning" sx={{ mb: 3 }}>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    ⚠️ Se encontraron {results.length} coincidencia(s)
+                    ⚠️ Se encontraron {getTotalResults()} coincidencia(s)
                   </Typography>
                   <Typography variant="body2">
                     Revisa cuidadosamente los resultados antes de proceder.
                   </Typography>
                 </Alert>
 
-                <TableContainer component={Paper} variant="outlined">
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableCell sx={{ fontWeight: 600 }}>Fuente</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Entidad Coincidente</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Nivel de Riesgo</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Fecha de Actualización</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {results.map((result, index) => (
-                        <TableRow 
-                          key={index}
-                          sx={{ 
-                            '&:hover': { backgroundColor: '#f9f9f9' },
-                            backgroundColor: result.nivelRiesgo === 'Alto' ? '#ffebee' : 'inherit'
-                          }}
-                        >
-                          <TableCell>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {result.fuente}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {result.entidadCoincidente}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={result.nivelRiesgo}
-                              color={getRiskColor(result.nivelRiesgo) as any}
-                              size="small"
-                              sx={{ fontWeight: 500 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" color="text.secondary">
-                              {formatDate(result.fechaActualizacion)}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                {/* OFAC Results Table */}
+                {results.ofac.length > 0 && (
+                  <Box sx={{ mb: 4 }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: 'error.main', fontWeight: 600 }}>
+                      🚨 OFAC - Office of Foreign Assets Control ({results.ofac.length} resultados)
+                    </Typography>
+                    <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ backgroundColor: '#ffebee' }}>
+                            <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Dirección</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Tipo</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Programa(s)</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Lista</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Score</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {results.ofac.map((result, index) => (
+                            <TableRow key={index} sx={{ '&:hover': { backgroundColor: '#fafafa' } }}>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {result.name}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {result.address}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Chip label={result.type} size="small" color="error" variant="outlined" />
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {result.programs}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Chip label={result.list} size="small" color="warning" />
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main' }}>
+                                  {result.score}%
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
+
+                {/* World Bank Results Table */}
+                {results.worldbank.length > 0 && (
+                  <Box sx={{ mb: 4 }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: 'warning.main', fontWeight: 600 }}>
+                      🏦 World Bank - Debarred Firms ({results.worldbank.length} resultados)
+                    </Typography>
+                    <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ backgroundColor: '#fff3e0' }}>
+                            <TableCell sx={{ fontWeight: 600 }}>Nombre de la Empresa</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Dirección</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>País</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Fecha Desde</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Fecha Hasta</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Motivos</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {results.worldbank.map((result, index) => (
+                            <TableRow key={index} sx={{ '&:hover': { backgroundColor: '#fafafa' } }}>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {result.firmName}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {result.address}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Chip label={result.country} size="small" color="info" variant="outlined" />
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {result.fromDate}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem', color: result.toDate === 'Ongoing' ? 'error.main' : 'text.primary' }}>
+                                  {result.toDate}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {result.grounds}
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
+
+                {/* Offshore Leaks Results Table */}
+                {results.offshore.length > 0 && (
+                  <Box sx={{ mb: 4 }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: 'info.main', fontWeight: 600 }}>
+                      🏝️ Offshore Leaks Database ({results.offshore.length} resultados)
+                    </Typography>
+                    <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
+                            <TableCell sx={{ fontWeight: 600 }}>Entidad</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Jurisdicción</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Vinculado a</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Fuente de Datos</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {results.offshore.map((result, index) => (
+                            <TableRow key={index} sx={{ '&:hover': { backgroundColor: '#fafafa' } }}>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {result.entity}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Chip label={result.jurisdiction} size="small" color="info" variant="outlined" />
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {result.linkedTo}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {result.dataFrom}
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
               </>
             )}
           </Box>
@@ -287,14 +428,23 @@ const ScreeningModal: React.FC<ScreeningModalProps> = ({
         >
           Cerrar
         </Button>
-        {hasSearched && results.length > 0 && (
-          <Button 
-            variant="contained"
-            color="warning"
-            sx={{ ml: 1 }}
-          >
-            Generar Reporte
-          </Button>
+        {hasSearched && results && getTotalResults() > 0 && (
+          <>
+            <Button 
+              variant="contained"
+              color="warning"
+              sx={{ ml: 1 }}
+            >
+              Generar Reporte PDF
+            </Button>
+            <Button 
+              variant="contained"
+              color="error"
+              sx={{ ml: 1 }}
+            >
+              Marcar como Alto Riesgo
+            </Button>
+          </>
         )}
       </DialogActions>
     </Dialog>

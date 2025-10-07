@@ -24,11 +24,46 @@ export interface ProviderFormData {
   facturacionAnual: number;
 }
 
-export interface ScreeningResult {
-  fuente: string;
-  entidadCoincidente: string;
-  nivelRiesgo: 'Bajo' | 'Medio' | 'Alto';
-  fechaActualizacion: string;
+// Tipos para los resultados de screening por fuente
+export interface OFACResult {
+  name: string;
+  address: string;
+  type: string;
+  programs: string;
+  list: string;
+  score: string;
+}
+
+export interface WorldBankResult {
+  firmName: string;
+  address: string;
+  country: string;
+  fromDate: string;
+  toDate: string;
+  grounds: string;
+}
+
+export interface OffshoreResult {
+  entity: string;
+  jurisdiction: string;
+  linkedTo: string;
+  dataFrom: string;
+}
+
+// Respuesta completa del screening
+export interface ScreeningResponse {
+  'company name': string;
+  ofac: string[][];
+  worldbank: string[][];
+  offshore: string[][];
+}
+
+// Resultados procesados para mostrar en las tablas
+export interface ProcessedScreeningResults {
+  companyName: string;
+  ofac: OFACResult[];
+  worldbank: WorldBankResult[];
+  offshore: OffshoreResult[];
 }
 
 export interface ScreeningRequest {
