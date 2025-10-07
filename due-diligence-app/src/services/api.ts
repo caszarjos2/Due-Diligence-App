@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, ProviderFormData, ScreeningResult } from '../types/Provider';
+import type { Provider, ProviderFormData, ScreeningResponse } from '../types/Provider';
 
 // Configure axios instance
 const api = axios.create({
@@ -70,7 +70,7 @@ export const providerApi = {
   },
 
   // Screening - check provider against risk lists
-  screening: async (id: number, fuentes: string[]): Promise<ScreeningResult[]> => {
+  screening: async (id: number, fuentes: string[]): Promise<ScreeningResponse> => {
     const fuentesParam = fuentes.join(',');
     const response = await api.get(`/providers/${id}/screening?fuentes=${fuentesParam}`);
     return response.data;
